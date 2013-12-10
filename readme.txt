@@ -1,10 +1,10 @@
 === AppPresser - Mobile App Framework ===
-Contributors: apppresser
+Contributors: apppresser, webdevstudios, williamsba1, scottopolis, jtsternberg, Messenlehner, LisaSabinWilson, tw2113
 Donate link: http://apppresser.com/
 Tags: mobile, app, ios, android, application, phonegap
 Requires at least: 3.5
-Tested up to: 3.7.1
-Stable tag: 1.0
+Tested up to: 3.8
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,7 +20,9 @@ Developers can use this plugin to make custom apps, or custom extensions for App
 
 This plugin is not an app-creator in itself, it serves as the core for all app development with AppPresser.
 
-<iframe width="530" height="298" src="//www.youtube.com/embed/i8Deew6pif4" frameborder="0" allowfullscreen></iframe>
+[youtube http://www.youtube.com/watch?v=i8Deew6pif4]
+
+Want to contribute to AppPresser? Awesome! Visit our [GitHub site for the project](https://github.com/WebDevStudios/AppPresser "AppPresser on GitHub").
 
 ### What this plugin does:
 
@@ -78,3 +80,24 @@ Please see our website for a tutorial.
 = Can I make any type of app I want? =
 
 Technically you can do anything with an AppPresser app that you can do with Phonegap. That means if you are handy with javascript, the sky is the limit!
+
+== Changelog ==
+
+= 1.0.1 =
+* Bug Fixes
+* Add theme updater and updater API
+* Better styling for "MP6"
+
+= 1.0.0 =
+* Release into the wild!
+
+
+== Upgrade Notice ==
+
+= 1.0.1 =
+* Bug Fixes
+* Add theme updater and updater API
+* Better styling for "MP6"
+
+= 1.0.0 =
+* Release into the wild!
