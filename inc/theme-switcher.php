@@ -30,7 +30,7 @@ class AppPresser_Theme_Switcher extends AppPresser {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		add_action( 'plugins_loaded', array( $this, 'switch_theme' ), 1 );
+		add_action( 'plugins_loaded', array( $this, 'switch_theme' ), 9999 );
 		add_filter( 'pre_option_show_on_front', array( $this, 'pre_show_on_front' ) );
 		add_filter( 'pre_option_page_on_front', array( $this, 'pre_page_on_front' ) );
 		$this->theme = wp_get_theme();
@@ -47,9 +47,8 @@ class AppPresser_Theme_Switcher extends AppPresser {
 			return;
 
 		// Set cookie from querystring if request is coming from an app
-		if ( isset( $_GET['appp'] ) && $_GET['appp'] == 1 || isset( $_COOKIE['AppPresser_Appp'] ) ) {
+		if ( self::is_app() ) {
 			setcookie( 'AppPresser_Appp', 'true', time() + ( DAY_IN_SECONDS * 30 ) );
-			self::is_app( 1 );
 		}
 
 		if (
@@ -139,4 +138,3 @@ function appp_is_android() {
 	$ua = strtolower( $_SERVER['HTTP_USER_AGENT'] );
 	return ( false !== stripos( $ua, 'android' ) );
 }
-
