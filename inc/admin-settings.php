@@ -15,8 +15,10 @@ class AppPresser_Admin_Settings extends AppPresser {
 	// A single instance of this class.
 	public static $instance       = null;
 	public static $page_slug      = 'apppresser_settings';
+	public static $extensions_slug       = 'apppresser_sub_extensions';
 	public static $help_slug      = 'apppresser_sub_help_support';
 	public static $menu_slug      = '';
+	public static $extensions_menu_slug  = '';
 	public static $help_menu_slug = '';
 	public static $image_inputs   = array();
 	public static $all_fields     = array();
@@ -40,7 +42,7 @@ class AppPresser_Admin_Settings extends AppPresser {
 	 * @since  1.0.0
 	 */
 	function __construct() {
-		add_action( 'admin_menu', array( $this, 'plugin_menu' ) );
+		add_action( 'admin_menu', array( $this, 'plugin_menu' ), 9 );
 		add_filter( 'sanitize_option_'. AppPresser::SETTINGS_NAME, array( $this, 'maybe_reset_license_statuses' ), 99 );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'apppresser_add_settings', array( $this, 'add_settings' ), 6 ); // Higher priority
@@ -82,14 +84,20 @@ class AppPresser_Admin_Settings extends AppPresser {
 	 * @since  1.0.0
 	 */
 	function plugin_menu() {
-		// Create main menu
+		// Create main menu and settings page
 		self::$menu_slug = add_menu_page( __( 'AppPresser', 'apppresser' ), __( 'AppPresser', 'apppresser' ), 'manage_options', self::$page_slug, array( $this, 'settings_page' ) );
 		// Create submenu items
+
+		// Extensions page
+		self::$extensions_menu_slug = add_submenu_page( self::$page_slug, __( 'Extensions', 'apppresser' ), __( 'Extensions', 'apppresser' ), 'manage_options', self::$extensions_slug, array( $this, 'extensions_page' ) );
+		// Help page
 		self::$help_menu_slug = add_submenu_page( self::$page_slug, __( 'Help / Support', 'apppresser' ), __( 'Help / Support', 'apppresser' ), 'manage_options', self::$help_slug, array( $this, 'help_support_page' ) );
 
-		// enqueue our js
 		add_action( 'admin_head-' . self::$menu_slug, array( $this, 'admin_head' ) );
-		add_action( 'admin_print_scripts-' . self::$menu_slug, array( $this, 'admin_scripts' ) );
+
+		// enqueue
+		foreach ( array( self::$menu_slug, self::$extensions_menu_slug, self::$help_menu_slug ) as $slug )
+			add_action( 'admin_print_scripts-' . $slug, array( $this, 'admin_scripts' ) );
 
 	}
 
@@ -101,21 +109,14 @@ class AppPresser_Admin_Settings extends AppPresser {
 		// admin scripts and styles
 		wp_enqueue_script( 'appp-admin', self::$js_url . 'appp-admin.js', array( 'jquery', 'jquery-ui-core', 'jquery-ui-tooltip' ), self::VERSION );
 		wp_enqueue_style( 'jquery-ui-smoothness', self::$css_url . 'smoothness/smoothness.custom.min.css' );
+		wp_enqueue_style( 'appp-admin-styles', self::$css_url . 'appp-admin-styles.css', null, self::VERSION.time() );
 	}
 
 	/**
-	 * Apply some settings for our tooltip hover spot
+	 * Easy hook for adding to the admin_head on the AppPresser settings page
 	 * @since  1.0.0
 	 */
 	function admin_head() {
-		?>
-		<style>.apppresser_settings .help { background: rgb(220,220,220); border-radius: 50%; color: rgb(0, 0, 0); display: inline-block; height: 15px; margin-left: 5px; text-align: center; text-decoration: none; text-shadow: none; width: 15px; font-weight: normal; } .apppresser_settings.mp6 .help { line-height: 15px; } .form-table .appp-section-title { padding-bottom: 0; } .appp-section-title h3 { margin: 0; } .apppresser_settings .form-table { display: none; padding-top: .6em; } .apppresser_settings .form-table.nav-tab-active { display: block; } .appp-ajax-results-help { display:none; margin: 10px 0 -8px 7px !important; } .submit .appp-tabs { margin: 0 10px; display: none; } .appp-tabs.nav-tab-active { display: inline; } .license_key.description span {
-			color: white; display: block; background: #49C749; text-align: center; font-weight: bold; font-style: normal; text-transform: uppercase; margin: -5px 1px; width: 25em; } .mp6 .license_key.description span { font-size: 14px; } .license_key.description span.inactive {
-			background: #F14949; } .license_key.description span.inactive a { color: #fff; }
-		</style>
-		<?php
-
-		// Easy hook for adding to the admin_head on the AppPresser settings page
 		do_action( 'appp_admin_settings_head', self::run() );
 	}
 
@@ -206,7 +207,8 @@ class AppPresser_Admin_Settings extends AppPresser {
 		?>
 		<div class="wrap <?php echo $class; ?>">
 			<?php
-			$current_tab = isset( $_GET['tab'] ) ? $_GET['tab'] : array_shift( array_keys( self::$admin_tabs ) );
+			$keys = array_keys( self::$admin_tabs );
+			$current_tab = isset( $_GET['tab'] ) ? $_GET['tab'] : array_shift( $keys );
 			$current_tab = preg_replace('/tab-/', '', $current_tab, 1 );
 
 			// Our tabs
@@ -263,9 +265,14 @@ class AppPresser_Admin_Settings extends AppPresser {
 		// Main tab
 		self::add_setting_tab( __( 'AppPresser', 'apppresser' ), 'general' );
 		self::add_setting_label( __( 'AppPresser Core Settings', 'apppresser' ) );
-		self::add_setting( 'mobile_browser_theme_switch', __( 'Load AppPresser for mobile browsers', 'apppresser' ), array( 'type' => 'checkbox', 'helptext' => __( 'Whether or not you want to load the application layer for mobile users.', 'apppresser' ) ) );
+
+		// For now...
+		if ( appp_get_setting( 'mobile_browser_theme_switch' ) ) {
+			self::add_setting( 'mobile_browser_theme_switch', __( 'Load AppPresser for mobile browsers', 'apppresser' ), array( 'type' => 'checkbox', 'helptext' => __( 'Display AppPresser in mobile browsers such as Safari and Chrome, instead of your normal theme.', 'apppresser' ) ) );
+		}
+
 		self::add_setting( 'admin_theme_switch', __( 'Load AppPresser for Admins Only', 'apppresser' ), array( 'type' => 'checkbox', 'helptext' => __( 'Check this if you want to test your AppPresser app without loading it for visitors to your site.', 'apppresser' ), 'description' => __( '(for testing purposes)', 'apppresser' ) ) );
-		self::add_setting( 'appp_theme', __( 'Admin only theme', 'apppresser' ), array( 'type' => 'select', 'options' => $this->themes, 'helptext' => __( 'Select which theme you want to be loaded with your testing of AppPresser.', 'apppresser' ), 'description' => __( 'must be enabled above', 'apppresser' ) ) );
+		self::add_setting( 'appp_theme', __( 'App only theme', 'apppresser' ), array( 'type' => 'select', 'options' => $this->themes, 'helptext' => __( 'Select which theme you want to be loaded inside the app, such as the AppPresser theme.', 'apppresser' ), 'description' => __( 'must be enabled above', 'apppresser' ) ) );
 		self::add_setting( 'appp_home_page', __( 'Use a unique homepage for your app.', 'apppresser' ), array( 'helptext' => __( 'Allows you to specify which page users will see first when they load up you AppPresser app.', 'apppresser' ), 'description' => __( 'Start typing to search for a page', 'apppresser' ) ) );
 
 		$menus = array( 'option-none' => __( '-- select --', 'apppresser' ) );
@@ -309,24 +316,6 @@ class AppPresser_Admin_Settings extends AppPresser {
 	}
 
 	/**
-	 * Help and Support settings page
-	 * @since  1.0.0
-	 */
-	function help_support_page() {
-		$class = self::$page_slug;
-		$class .= self::is_mp6() ? ' mp6' : '';
-		?>
-		<div class="wrap <?php echo $class; ?>">
-			<h2>AppPresser <?php _e( 'Help and Support', 'apppresser' ); ?></h2>
-			<p><strong><?php _e( 'Resources', 'apppresser' ); ?>:</strong> <a href="https://github.com/WebDevStudios/AppPresser/" target="_blank">AppPresser <?php _e( 'Core on Github', 'apppresser' ); ?></a> | <a href="http://wordpress.org/support/plugin/apppresser" target="_blank"><?php _e( 'Support Forums', 'apppresser' ); ?></a> | <a href="http://apppresser.com/docs/" target="_blank">AppPresser <?php _e( 'Documentation', 'apppresser' ); ?></a></p>
-			<p><strong>AppPresser <?php _e( 'Online', 'apppresser' ); ?>:</strong> <a href="http://twitter.com/apppresser" target="_blank"><?php _e( 'Twitter', 'apppresser' ); ?></a> | <a href="http://facebook.com/apppresser" target="_blank"><?php _e( 'Facebook', 'apppresser' ); ?></a> | <a href="http://youtube.com/user/apppresser" target="_blank"><?php _e( 'YouTube', 'apppresser' ); ?></a></p>
-			<h3><?php _e( 'About AppPresser', 'apppresser' ); ?></h3>
-			<p><?php _e( 'AppPresser was created by Scott Bolinger, Brad Williams, Brian Messenlehner, and Lisa Sabin-Wilson', 'apppresser' ); ?>.</p>
-		</div>
-		<?php
-	}
-
-	/**
 	 * Adds a setting section to AppPresser's settings
 	 * @since  1.0.0
 	 * @param  string  $key     Option key
@@ -336,12 +325,13 @@ class AppPresser_Admin_Settings extends AppPresser {
 	 */
 	public static function add_setting( $key, $label, $args = array() ) {
 
+		$keys = array_keys( self::$admin_tabs );
 		$defaults = array(
 			'type'        => 'text',
 			'helptext'    => '',
 			'description' => '',
 			'options'     => array(),
-			'tab'         => array_shift( array_keys( self::$admin_tabs ) ),
+			'tab'         => array_shift( $keys ),
 			'echo'        => false,
 		);
 		$args = wp_parse_args( $args, $defaults );
@@ -515,6 +505,71 @@ class AppPresser_Admin_Settings extends AppPresser {
 		// send back our encoded data
 		wp_send_json_success( $return );
 
+	}
+
+	/**
+	 * Help and Support settings page
+	 * @since  1.0.0
+	 */
+	function help_support_page() {
+		$class = self::$page_slug;
+		$class .= self::is_mp6() ? ' mp6' : '';
+		?>
+		<div class="wrap <?php echo $class; ?>">
+			<h2>AppPresser <?php _e( 'Help and Support', 'apppresser' ); ?></h2>
+			<p><strong><?php _e( 'Resources', 'apppresser' ); ?>:</strong> <a href="https://github.com/WebDevStudios/AppPresser/" target="_blank">AppPresser <?php _e( 'Core on Github', 'apppresser' ); ?></a> | <a href="http://wordpress.org/support/plugin/apppresser" target="_blank"><?php _e( 'Support Forums', 'apppresser' ); ?></a> | <a href="http://apppresser.com/docs/" target="_blank">AppPresser <?php _e( 'Documentation', 'apppresser' ); ?></a></p>
+			<p><strong>AppPresser <?php _e( 'Online', 'apppresser' ); ?>:</strong> <a href="http://twitter.com/apppresser" target="_blank"><?php _e( 'Twitter', 'apppresser' ); ?></a> | <a href="http://facebook.com/apppresser" target="_blank"><?php _e( 'Facebook', 'apppresser' ); ?></a> | <a href="http://youtube.com/user/apppresser" target="_blank"><?php _e( 'YouTube', 'apppresser' ); ?></a></p>
+			<h3><?php _e( 'About AppPresser', 'apppresser' ); ?></h3>
+			<p><?php _e( 'AppPresser was created by Scott Bolinger, Brad Williams, Brian Messenlehner, and Lisa Sabin-Wilson', 'apppresser' ); ?>.</p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * AppPresser extensions page output
+	 * @since  1.0.4
+	 */
+	function extensions_page() {
+		$class = self::$page_slug;
+		$class .= self::is_mp6() ? ' mp6' : '';
+		?>
+		<div class="wrap <?php echo $class; ?>">
+			<h2><?php printf( 'AppPresser ' .__( 'Extensions &nbsp;&mdash;&nbsp; %s', 'apppresser' ), '<a href="http://apppresser.com/extensions/?ref=appp" class="button-primary" target="_blank">' . __( 'Browse All Extensions', 'apppresser' ) . '</a>' ); ?></h2>
+			<p><?php _e( 'These extensions extend the functionality of AppPresser.', 'apppresser' ); ?></p>
+
+         <?php
+			// Attempt to pull back our cached feed
+			$feed = get_transient( 'appp_extensions_feed' );
+			$fallback = '<div class="error"><p>' . __( 'There was an error retrieving the extensions list. Please try again later.', 'apppresser' ) . '</div>';
+
+			// If we don't have a cached feed, pull back fresh data
+			if ( empty( $feed ) ) {
+				// Retrieve and parse our feed
+				$feed = wp_remote_get( 'http://apppresser.com/?feed=addons', array( 'sslverify' => false ) );
+				if ( ! is_wp_error( $feed ) ) {
+					if ( isset( $feed['body'] ) && strlen( $feed['body'] ) > 0 ) {
+						$feed = wp_remote_retrieve_body( $feed );
+						// Cache our feed for 1 hour
+						set_transient( 'appp_extensions_feed', $feed, HOUR_IN_SECONDS );
+					}
+				}
+			}
+
+			// display the feed or error message
+			echo $feed && ! is_wp_error( $feed ) ? $feed : $fallback;
+			?>
+     </div>
+     <?php
+
+	}
+
+	/**
+	 * Returns url to the AppPresser settings page
+	 * @since  1.0.4
+	 * @return string  AppPresser settings page url
+	 */
+	public static function url() {
+		return add_query_arg( 'page', self::$page_slug, admin_url( 'admin.php' ) );
 	}
 
 }
