@@ -22,6 +22,7 @@ class AppPresser_Admin_Settings extends AppPresser {
 	public static $help_menu_slug = '';
 	public static $image_inputs   = array();
 	public static $all_fields     = array();
+	public static $field_args     = array();
 	public static $admin_tabs     = array();
 	public static $license_keys   = array();
 
@@ -168,6 +169,23 @@ class AppPresser_Admin_Settings extends AppPresser {
 
 		}
 
+		// Don't delete license keys and other options if a particular plugin is deactivated at the time of saving.
+
+		// Get existing options
+		$existing = is_array( appp_get_setting() ) ? appp_get_setting() : array();
+		// Check for keys differing keys from existing option
+		$diff = array_diff_key( $existing, $cleaninput );
+		// Loop through any differeing keys
+		foreach ( (array) $diff as $field_id => $value ) {
+
+			// If the field is still registered, ignore it
+			if ( !! self::get_all_fields( $field_id ) )
+				continue;
+
+			// If we get here, the field is no longer registered and so the option should be preserved.
+			$cleaninput[ $field_id ] = $diff[ $field_id  ];
+		}
+
 		return $cleaninput;
 	}
 
@@ -227,8 +245,10 @@ class AppPresser_Admin_Settings extends AppPresser {
 					$current_class = $tab == $current_tab ? ' nav-tab-active' : '';
 
 					echo '<table class="appp-tabs form-table tab-'. $tab . $current_class .'">';
+						// A hook for adding additional data to the top of each tabbed area
+						do_action( "apppresser_tab_top_$tab", self::run(), self::settings() );
 						if ( isset( self::$all_fields[ $tab ] ) ) {
-							echo implode( '', self::$all_fields[ $tab ] );
+							echo implode( "\n", self::$all_fields[ $tab ] );
 						}
 						// A hook for adding additional data to the bottom of each tabbed area
 						do_action( "apppresser_tab_bottom_$tab", self::run(), self::settings() );
@@ -294,7 +314,7 @@ class AppPresser_Admin_Settings extends AppPresser {
 	 * @since  1.0.0
 	 */
 	public function help_link() {
-		echo '<a class="button-secondary" href="'. add_query_arg( 'page', self::$help_slug, admin_url( 'admin.php' ) ) .'">'. __( 'Help/Support', 'apppresser' ) .'</a>';
+		echo '<a href="'. add_query_arg( 'page', self::$help_slug, admin_url( 'admin.php' ) ) .'">'. __( 'Help/Support', 'apppresser' ) .'</a>';
 	}
 
 	/**
@@ -331,10 +351,11 @@ class AppPresser_Admin_Settings extends AppPresser {
 			'helptext'    => '',
 			'description' => '',
 			'options'     => array(),
-			'tab'         => array_shift( $keys ),
+			'tab'         => isset( $args['echo'] ) && $args['echo'] ? 'echoed' : array_shift( $keys ),
 			'echo'        => false,
 		);
 		$args = wp_parse_args( $args, $defaults );
+
 		// Clean values
 		$key     = esc_attr( $key );
 		$label   = sanitize_text_field( $label );
@@ -434,14 +455,43 @@ class AppPresser_Admin_Settings extends AppPresser {
 		$_field = $_field . $field .'
 		</tr>
 		';
-		if ( $args['echo'] ) {
+
+		self::$all_fields[ $args['tab'] ][ $key ] = $_field;
+		self::$field_args[ $key ] = array( 'args' => $args );
+
+		if ( $args['echo'] )
 			echo $_field;
-			self::$all_fields['echoed'][ $key ] = $_field;
-		} else {
-			self::$all_fields[ $args['tab'] ][ $key ] = $_field;
-		}
 
 		return $_field;
+	}
+
+	/**
+	 * Gets all registered fields arguments
+	 * @since  1.0.5
+	 * @param  string  $field_id Id of field to check
+	 * @return mixed             False, all fields array, or singular field array
+	 */
+	public static function get_all_fields( $field_id = '' ) {
+		if ( ! empty( self::$field_args ) ) {
+
+			if ( ! $field_id )
+				return self::$field_args;
+
+			return isset( self::$field_args[ $field_id ] ) ? self::$field_args[ $field_id ] : false;
+		}
+
+		ob_start();
+		// Do html
+		@do_action( 'apppresser_add_settings', self::run() );
+		// grab the data from the output buffer and add it to our $content variable
+		$content = ob_get_contents();
+		ob_end_clean();
+
+		if ( ! $field_id )
+			return self::$field_args;
+
+		return isset( self::$field_args[ $field_id ] ) ? self::$field_args[ $field_id ] : false;
+
 	}
 
 	/**
@@ -518,9 +568,9 @@ class AppPresser_Admin_Settings extends AppPresser {
 		<div class="wrap <?php echo $class; ?>">
 			<h2>AppPresser <?php _e( 'Help and Support', 'apppresser' ); ?></h2>
 			<p><strong><?php _e( 'Resources', 'apppresser' ); ?>:</strong> <a href="https://github.com/WebDevStudios/AppPresser/" target="_blank">AppPresser <?php _e( 'Core on Github', 'apppresser' ); ?></a> | <a href="http://wordpress.org/support/plugin/apppresser" target="_blank"><?php _e( 'Support Forums', 'apppresser' ); ?></a> | <a href="http://apppresser.com/docs/" target="_blank">AppPresser <?php _e( 'Documentation', 'apppresser' ); ?></a></p>
-			<p><strong>AppPresser <?php _e( 'Online', 'apppresser' ); ?>:</strong> <a href="http://twitter.com/apppresser" target="_blank"><?php _e( 'Twitter', 'apppresser' ); ?></a> | <a href="http://facebook.com/apppresser" target="_blank"><?php _e( 'Facebook', 'apppresser' ); ?></a> | <a href="http://youtube.com/user/apppresser" target="_blank"><?php _e( 'YouTube', 'apppresser' ); ?></a></p>
+			<p><strong>AppPresser <?php _e( 'Online', 'apppresser' ); ?>:</strong> <a href="http://apppresser.com" target="_blank"><?php _e( 'Web', 'apppresser' ); ?></a> |  <a href="http://twitter.com/apppresser" target="_blank"><?php _e( 'Twitter', 'apppresser' ); ?></a> | <a href="http://facebook.com/apppresser" target="_blank"><?php _e( 'Facebook', 'apppresser' ); ?></a> | <a href="http://youtube.com/user/apppresser" target="_blank"><?php _e( 'YouTube', 'apppresser' ); ?></a></p>
 			<h3><?php _e( 'About AppPresser', 'apppresser' ); ?></h3>
-			<p><?php _e( 'AppPresser was created by Scott Bolinger, Brad Williams, Brian Messenlehner, and Lisa Sabin-Wilson', 'apppresser' ); ?>.</p>
+			<p><?php printf( __( '%s was created by Scott Bolinger, Brad Williams, Brian Messenlehner, and Lisa Sabin-Wilson', 'apppresser' ), '<a href="http://apppresser.com" target="_blank">'. __( 'AppPresser', 'apppresser' ) .'</a>' ); ?>.</p>
 		</div>
 		<?php
 	}
