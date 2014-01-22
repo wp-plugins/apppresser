@@ -5,7 +5,7 @@ Plugin URI: http://apppresser.com
 Description: A mobile app development framework for WordPress.
 Text Domain: apppresser
 Domain Path: /languages
-Version: 1.0.5
+Version: 1.0.6
 Author: AppPresser Team
 Author URI: http://apppresser.com
 License: GPLv2
@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class AppPresser {
 
-	const VERSION           = '1.0.5';
+	const VERSION           = '1.0.6';
 	const SETTINGS_NAME     = 'appp_settings';
 	public static $settings = 'false';
 	public static $instance = null;
@@ -97,7 +97,7 @@ class AppPresser {
 		// This will mean that it's harder to break caching on the cordova script
 		add_filter( 'script_loader_src', array( $this, 'remove_query_arg' ), 9999 );
 
-		require_once( self::$inc_path . 'admin-settings.php' );
+		require_once( self::$inc_path . 'AppPresser_Admin_Settings.php' );
 		require_once( self::$inc_path . 'plugin-updater.php' );
 	}
 

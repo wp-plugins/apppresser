@@ -43,6 +43,11 @@ class AppPresser_Admin_Settings extends AppPresser {
 	 * @since  1.0.0
 	 */
 	function __construct() {
+		// Manually clear cookies?
+		if ( isset( $_GET['clear_app_cookie'] ) && 'true' === $_GET['clear_app_cookie'] ) {
+			self::clear_cookie();
+		}
+
 		add_action( 'admin_menu', array( $this, 'plugin_menu' ), 9 );
 		add_filter( 'sanitize_option_'. AppPresser::SETTINGS_NAME, array( $this, 'maybe_reset_license_statuses' ), 99 );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
@@ -56,19 +61,25 @@ class AppPresser_Admin_Settings extends AppPresser {
 		if ( $appp_theme = self::settings( 'appp_theme' ) ) {
 			// If admin only theme object exists
 			if ( isset( $this->themes[ $appp_theme ] ) && is_callable( array( $this->themes[ $appp_theme ], 'get_template_directory' ) ) ) {
+
+				// Let themes override the location/name of the file
+				$file_override = apply_filters( 'apppresser_theme_settings_file', '' );
+				if ( $file_override && file_exists( $file_override ) ) {
+					require_once( $file_override );
+				}
 				// Check child theme directory first
 				$dir = $this->themes[ $appp_theme ]->get_stylesheet_directory();
 				// If there is a 'appp-settings.php' file,
 				if ( file_exists( $dir .'/appp-settings.php' ) ) {
 					// include it
-					include( $dir .'/appp-settings.php' );
+					require_once( $dir .'/appp-settings.php' );
 				}
 				// Ok, check parent theme directory
 				$dir = $this->themes[ $appp_theme ]->get_template_directory();
 				// If there is a 'appp-settings.php' file,
 				if ( file_exists( $dir .'/appp-settings.php' ) ) {
 					// include it
-					include( $dir .'/appp-settings.php' );
+					require_once( $dir .'/appp-settings.php' );
 				}
 			}
 		}
@@ -85,20 +96,35 @@ class AppPresser_Admin_Settings extends AppPresser {
 	 * @since  1.0.0
 	 */
 	function plugin_menu() {
-		// Create main menu and settings page
-		self::$menu_slug = add_menu_page( __( 'AppPresser', 'apppresser' ), __( 'AppPresser', 'apppresser' ), 'manage_options', self::$page_slug, array( $this, 'settings_page' ) );
-		// Create submenu items
 
-		// Extensions page
+		$page_title = __( 'AppPresser', 'apppresser' );
+		// Create main menu and settings page
+		self::$menu_slug = add_menu_page( $page_title, $page_title, 'manage_options', self::$page_slug, array( $this, 'settings_page' ) );
+
+		// Extensions page submenu item
 		self::$extensions_menu_slug = add_submenu_page( self::$page_slug, __( 'Extensions', 'apppresser' ), __( 'Extensions', 'apppresser' ), 'manage_options', self::$extensions_slug, array( $this, 'extensions_page' ) );
-		// Help page
+		// Help page submenu item
 		self::$help_menu_slug = add_submenu_page( self::$page_slug, __( 'Help / Support', 'apppresser' ), __( 'Help / Support', 'apppresser' ), 'manage_options', self::$help_slug, array( $this, 'help_support_page' ) );
 
 		add_action( 'admin_head-' . self::$menu_slug, array( $this, 'admin_head' ) );
 
 		// enqueue
-		foreach ( array( self::$menu_slug, self::$extensions_menu_slug, self::$help_menu_slug ) as $slug )
+		foreach ( array( self::$menu_slug, self::$extensions_menu_slug, self::$help_menu_slug ) as $slug ) {
 			add_action( 'admin_print_scripts-' . $slug, array( $this, 'admin_scripts' ) );
+		}
+
+		// Add notification bubble if any notifications
+		if ( $notifications = $this->notification_badge() ) {
+
+			global $menu;
+			// Add the notification bubble to our top level menu
+			foreach ( $menu as $menu_key => $menu_item ) {
+				if ( isset( $menu_item[2] ) && self::$page_slug == $menu_item[2] ) {
+					$menu[ $menu_key ][0] = $menu_item[0] . $notifications;
+				}
+			}
+		}
+
 
 	}
 
@@ -147,7 +173,7 @@ class AppPresser_Admin_Settings extends AppPresser {
 					break;
 				case 'mobile_browser_theme_switch':
 					// Clear cookie
-					setcookie( 'AppPresser_Appp', 'true', time() - DAY_IN_SECONDS );
+					self::clear_cookie();
 					$cleaninput[ $key ] = isset( $inputs[ $key ] ) && $inputs[ $key ] == 'on' ? 'on' : '';
 				case 'admin_theme_switch':
 					$cleaninput[ $key ] = isset( $inputs[ $key ] ) && $inputs[ $key ] == 'on' ? 'on' : '';
@@ -616,12 +642,38 @@ class AppPresser_Admin_Settings extends AppPresser {
 	}
 
 	/**
+	 * 'apppresser_notifications' hook allows plugins/themes to add their own notification badge counts.
+	 * @since  1.0.6
+	 * @return string  Badge count markup or empty string
+	 */
+	public function notification_badge() {
+
+		$format = ' <span class="update-plugins count-%d"><span class="plugin-count">%s</span></span>';
+		$notification_count = apply_filters( 'apppresser_notifications', 0 );
+
+		// Send notification bubble markup if any notifications
+		if ( $notification_count ) {
+			return sprintf( $format, $notification_count, number_format_i18n( $notification_count ) );
+		}
+
+		return '';
+	}
+
+	/**
 	 * Returns url to the AppPresser settings page
 	 * @since  1.0.4
 	 * @return string  AppPresser settings page url
 	 */
 	public static function url() {
 		return add_query_arg( 'page', self::$page_slug, admin_url( 'admin.php' ) );
+	}
+
+	/**
+	 * Removes cookie by setting a date in the past as the expiration
+	 * @since  1.0.6
+	 */
+	public static function clear_cookie() {
+		setcookie( 'AppPresser_Appp', 'true', time() - DAY_IN_SECONDS );
 	}
 
 }
