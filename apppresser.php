@@ -5,7 +5,7 @@ Plugin URI: http://apppresser.com
 Description: A mobile app development framework for WordPress.
 Text Domain: apppresser
 Domain Path: /languages
-Version: 1.0.6
+Version: 1.0.7
 Author: AppPresser Team
 Author URI: http://apppresser.com
 License: GPLv2
@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class AppPresser {
 
-	const VERSION           = '1.0.6';
+	const VERSION           = '1.0.7';
 	const SETTINGS_NAME     = 'appp_settings';
 	public static $settings = 'false';
 	public static $instance = null;
@@ -99,6 +99,9 @@ class AppPresser {
 
 		require_once( self::$inc_path . 'AppPresser_Admin_Settings.php' );
 		require_once( self::$inc_path . 'plugin-updater.php' );
+		require_once( self::$inc_path . 'AppPresser_Theme_Customizer.php' );
+		$this->theme_customizer = new AppPresser_Theme_Customizer();
+
 	}
 
 	/**
@@ -141,9 +144,8 @@ class AppPresser {
 	 */
 	function includes() {
 
-		require_once( self::$inc_path . 'theme-switcher.php' );
+		require_once( self::$inc_path . 'AppPresser_Theme_Switcher.php' );
 		$this->theme_switcher = new AppPresser_Theme_Switcher();
-		require_once( self::$inc_path . 'mods.php' );
 		// Uncomment when we add back in the app panel
 		// require_once( self::$inc_path . 'body-class-meta-box.php' );
 

@@ -13,18 +13,18 @@
 class AppPresser_Admin_Settings extends AppPresser {
 
 	// A single instance of this class.
-	public static $instance       = null;
-	public static $page_slug      = 'apppresser_settings';
-	public static $extensions_slug       = 'apppresser_sub_extensions';
-	public static $help_slug      = 'apppresser_sub_help_support';
-	public static $menu_slug      = '';
-	public static $extensions_menu_slug  = '';
-	public static $help_menu_slug = '';
-	public static $image_inputs   = array();
-	public static $all_fields     = array();
-	public static $field_args     = array();
-	public static $admin_tabs     = array();
-	public static $license_keys   = array();
+	public static $instance        = null;
+	public static $page_slug       = 'apppresser_settings';
+	public static $extensions_slug = 'apppresser_sub_extensions';
+	public static $help_slug       = 'apppresser_sub_help_support';
+	public static $menu_slug       = '';
+	public static $extn_menu_slug  = '';
+	public static $help_menu_slug  = '';
+	public static $image_inputs    = array();
+	public static $all_fields      = array();
+	public static $field_args      = array();
+	public static $admin_tabs      = array();
+	public static $license_keys    = array();
 
 	/**
 	 * Creates or returns an instance of this class.
@@ -48,47 +48,60 @@ class AppPresser_Admin_Settings extends AppPresser {
 			self::clear_cookie();
 		}
 
+		// include theme settings file if it exists
+		$this->get_theme_settings_file();
+
+		// Get all themes
+		$this->themes    = wp_get_themes();
+		// Get all nav menus
+		$this->nav_menus = wp_get_nav_menus();
+
 		add_action( 'admin_menu', array( $this, 'plugin_menu' ), 9 );
 		add_filter( 'sanitize_option_'. AppPresser::SETTINGS_NAME, array( $this, 'maybe_reset_license_statuses' ), 99 );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'apppresser_add_settings', array( $this, 'add_settings' ), 6 ); // Higher priority
 		add_filter( 'apppresser_field_markup_text', array( $this, 'ajax_container' ), 10, 2 );
 		add_action( 'wp_ajax_appp_search_post_handler', array( $this, 'ajax_post_results' ) );
-		$this->themes = wp_get_themes();
-		$this->nav_menus = wp_get_nav_menus();
+		add_action( 'admin_head', array( $this, 'icon_styles' ) );
+
+	}
+
+	public function get_theme_settings_file() {
+		// Get saved apppresser theme
+		$appp_theme = self::settings( 'appp_theme' );
 
 		// Check for the 'Use different theme for app?' option
-		if ( $appp_theme = self::settings( 'appp_theme' ) ) {
+		if ( $appp_theme ) {
+
 			// If admin only theme object exists
 			if ( isset( $this->themes[ $appp_theme ] ) && is_callable( array( $this->themes[ $appp_theme ], 'get_template_directory' ) ) ) {
 
 				// Let themes override the location/name of the file
 				$file_override = apply_filters( 'apppresser_theme_settings_file', '' );
 				if ( $file_override && file_exists( $file_override ) ) {
-					require_once( $file_override );
+					return require_once( $file_override );
 				}
 				// Check child theme directory first
 				$dir = $this->themes[ $appp_theme ]->get_stylesheet_directory();
 				// If there is a 'appp-settings.php' file,
 				if ( file_exists( $dir .'/appp-settings.php' ) ) {
 					// include it
-					require_once( $dir .'/appp-settings.php' );
+					return require_once( $dir .'/appp-settings.php' );
 				}
 				// Ok, check parent theme directory
 				$dir = $this->themes[ $appp_theme ]->get_template_directory();
 				// If there is a 'appp-settings.php' file,
 				if ( file_exists( $dir .'/appp-settings.php' ) ) {
 					// include it
-					require_once( $dir .'/appp-settings.php' );
+					return require_once( $dir .'/appp-settings.php' );
 				}
 			}
 		}
-		// Otherwise if there is a 'appp-settings.php' file in the current theme,
+		// Otherwise if there is a 'appp-settings.php' file in the currently active theme,
 		elseif ( file_exists( get_stylesheet_directory_uri() .'/appp-settings.php' ) ) {
 			// include it
-			include( get_stylesheet_directory_uri() .'/appp-settings.php' );
+			return require_once( get_stylesheet_directory_uri() .'/appp-settings.php' );
 		}
-
 	}
 
 	/**
@@ -102,14 +115,14 @@ class AppPresser_Admin_Settings extends AppPresser {
 		self::$menu_slug = add_menu_page( $page_title, $page_title, 'manage_options', self::$page_slug, array( $this, 'settings_page' ) );
 
 		// Extensions page submenu item
-		self::$extensions_menu_slug = add_submenu_page( self::$page_slug, __( 'Extensions', 'apppresser' ), __( 'Extensions', 'apppresser' ), 'manage_options', self::$extensions_slug, array( $this, 'extensions_page' ) );
+		self::$extn_menu_slug = add_submenu_page( self::$page_slug, __( 'Extensions', 'apppresser' ), __( 'Extensions', 'apppresser' ), 'manage_options', self::$extensions_slug, array( $this, 'extensions_page' ) );
 		// Help page submenu item
 		self::$help_menu_slug = add_submenu_page( self::$page_slug, __( 'Help / Support', 'apppresser' ), __( 'Help / Support', 'apppresser' ), 'manage_options', self::$help_slug, array( $this, 'help_support_page' ) );
 
 		add_action( 'admin_head-' . self::$menu_slug, array( $this, 'admin_head' ) );
 
 		// enqueue
-		foreach ( array( self::$menu_slug, self::$extensions_menu_slug, self::$help_menu_slug ) as $slug ) {
+		foreach ( array( self::$menu_slug, self::$extn_menu_slug, self::$help_menu_slug ) as $slug ) {
 			add_action( 'admin_print_scripts-' . $slug, array( $this, 'admin_scripts' ) );
 		}
 
@@ -136,7 +149,7 @@ class AppPresser_Admin_Settings extends AppPresser {
 		// admin scripts and styles
 		wp_enqueue_script( 'appp-admin', self::$js_url . 'appp-admin.js', array( 'jquery', 'jquery-ui-core', 'jquery-ui-tooltip' ), self::VERSION );
 		wp_enqueue_style( 'jquery-ui-smoothness', self::$css_url . 'smoothness/smoothness.custom.min.css' );
-		wp_enqueue_style( 'appp-admin-styles', self::$css_url . 'appp-admin-styles.css', null, self::VERSION.time() );
+		wp_enqueue_style( 'appp-admin-styles', self::$css_url . 'appp-admin-styles.css', null, self::VERSION );
 	}
 
 	/**
@@ -147,6 +160,13 @@ class AppPresser_Admin_Settings extends AppPresser {
 		do_action( 'appp_admin_settings_head', self::run() );
 	}
 
+	/**
+	 * Include css for modifying menu icon
+	 * @since  1.0.0
+	 */
+	function icon_styles() {
+		require_once( self::$dir_path . 'css/icon-styles.php' );
+	}
 
 	/**
 	 * Register AppPresser Settings with Settings API.
@@ -314,12 +334,28 @@ class AppPresser_Admin_Settings extends AppPresser {
 
 		// For now...
 		if ( appp_get_setting( 'mobile_browser_theme_switch' ) ) {
-			self::add_setting( 'mobile_browser_theme_switch', __( 'Load AppPresser for mobile browsers', 'apppresser' ), array( 'type' => 'checkbox', 'helptext' => __( 'Display AppPresser in mobile browsers such as Safari and Chrome, instead of your normal theme.', 'apppresser' ) ) );
+			self::add_setting( 'mobile_browser_theme_switch', __( 'Load AppPresser for mobile browsers', 'apppresser' ), array(
+				'type' => 'checkbox',
+				'helptext' => __( 'Display AppPresser in mobile browsers such as Safari and Chrome, instead of your normal theme.', 'apppresser' ),
+			) );
 		}
 
-		self::add_setting( 'admin_theme_switch', __( 'Load AppPresser for Admins Only', 'apppresser' ), array( 'type' => 'checkbox', 'helptext' => __( 'Check this if you want to test your AppPresser app without loading it for visitors to your site.', 'apppresser' ), 'description' => __( '(for testing purposes)', 'apppresser' ) ) );
-		self::add_setting( 'appp_theme', __( 'App only theme', 'apppresser' ), array( 'type' => 'select', 'options' => $this->themes, 'helptext' => __( 'Select which theme you want to be loaded inside the app, such as the AppPresser theme.', 'apppresser' ), 'description' => __( 'must be enabled above', 'apppresser' ) ) );
-		self::add_setting( 'appp_home_page', __( 'Use a unique homepage for your app.', 'apppresser' ), array( 'helptext' => __( 'Allows you to specify which page users will see first when they load up you AppPresser app.', 'apppresser' ), 'description' => __( 'Start typing to search for a page', 'apppresser' ) ) );
+		self::add_setting( 'admin_theme_switch', __( 'Load AppPresser for Admins Only', 'apppresser' ), array(
+			'type' => 'checkbox',
+			'helptext' => __( 'Check this if you want to test your AppPresser app without loading it for visitors to your site.', 'apppresser' ),
+			'description' => __( '(for testing purposes)', 'apppresser' ),
+		) );
+
+		self::add_setting( 'appp_theme', __( 'App-only theme', 'apppresser' ), array(
+			'type' => 'select',
+			'options' => $this->themes,
+			'helptext' => __( 'Select which theme you want to be loaded inside the app, such as the AppPresser theme.', 'apppresser' ),
+			'description' => __( 'Must be enabled above.', 'apppresser' ),
+		) );
+		self::add_setting( 'appp_home_page', __( 'Use a unique homepage for your app.', 'apppresser' ), array(
+			'helptext' => __( 'Allows you to specify which page users will see first when they load up you AppPresser app.', 'apppresser' ),
+			'description' => __( 'Start typing to search for a page', 'apppresser' ),
+		) );
 
 		$menus = array( 'option-none' => __( '-- select --', 'apppresser' ) );
 		foreach ( (array) $this->nav_menus as $menu ) {
@@ -327,9 +363,17 @@ class AppPresser_Admin_Settings extends AppPresser {
 		}
 
 		// Register main menu setting
-		self::add_setting( 'menu', __( 'Main App Menu', 'apppresser' ), array( 'type' => 'select', 'options' => $menus, 'helptext' => __( 'Use a custom main menu inside your app, different from your main site.', '' ) ) );
+		self::add_setting( 'menu', __( 'Main App Menu', 'apppresser' ), array(
+			'type' => 'select',
+			'options' => $menus,
+			'helptext' => __( 'Use a custom main menu inside your app, different from your main site.', 'apppresser' ),
+		) );
 		// Register secondary  menu setting
-		self::add_setting( 'secondary_menu', __( 'Secondary App Menu', 'apppresser' ), array( 'type' => 'select', 'options' => $menus, 'helptext' => __( 'Use a custom secondary menu inside your app (the top right dropdown in the header).', 'apppresser' ) ) );
+		self::add_setting( 'secondary_menu', __( 'Secondary App Menu', 'apppresser' ), array(
+			'type' => 'select',
+			'options' => $menus,
+			'helptext' => __( 'Use a custom secondary menu inside your app (the top right dropdown in the header).', 'apppresser' ),
+		) );
 
 		add_action( 'apppresser_tab_buttons_general', array( $this, 'help_link' ) );
 
@@ -540,6 +584,11 @@ class AppPresser_Admin_Settings extends AppPresser {
 		self::add_setting( sanitize_title( $title ), $title, wp_parse_args( $args, array( 'type' => 'h3' ) ) );
 	}
 
+	/**
+	 * Retrieve registered license option keys via `apppresser_license_keys_to_check` filter
+	 * @since  1.0.1
+	 * @return array  All license option keys
+	 */
 	public static function license_keys() {
 		if ( empty( self::$license_keys ) )
 			self::$license_keys = apply_filters( 'apppresser_license_keys_to_check', self::$license_keys, self::run() );

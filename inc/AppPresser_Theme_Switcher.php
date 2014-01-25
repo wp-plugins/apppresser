@@ -34,8 +34,10 @@ class AppPresser_Theme_Switcher extends AppPresser {
 	 */
 	public function switch_theme() {
 
-		if ( is_admin() )
+		// If viewing the appp_theme customizer, we need the theme to be switched so the theme mods save properly
+		if ( is_admin() && ! $this->is_appp_theme_customizer() )
 			return;
+
 		// Set cookie from querystring if request is coming from an app
 		if ( self::is_app() ) {
 			setcookie( 'AppPresser_Appp', 'true', time() + ( DAY_IN_SECONDS * 30 ) );
@@ -60,6 +62,20 @@ class AppPresser_Theme_Switcher extends AppPresser {
 		add_filter( 'option_template', array( $this, 'template_request' ), 5 );
 		add_filter( 'option_stylesheet', array( $this, 'stylesheet_request' ), 5 );
 		add_filter( 'template', array( $this, 'maybe_switch' ) );
+	}
+
+	/**
+	 * Check url to determine if we are in the appp_theme customizer
+	 * @since  1.0.7
+	 * @return boolean True if we're in the customizer
+	 */
+	public function is_appp_theme_customizer() {
+		// Check if we're in the appp theme customizer
+		$is_appp_customizer = isset( $_GET['appp_theme'], $_GET['theme'] )
+		// or during ajax requests from the appp theme customizer
+		|| ( isset( $_REQUEST['wp_customize'], $_REQUEST['theme'] ) && appp_get_setting( 'appp_theme' ) == $_REQUEST['theme'] );
+
+		return $is_appp_customizer;
 	}
 
 	/**
