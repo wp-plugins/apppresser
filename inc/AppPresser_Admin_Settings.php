@@ -113,8 +113,12 @@ class AppPresser_Admin_Settings extends AppPresser {
 		// Create main menu and settings page
 		self::$menu_slug = add_menu_page( $page_title, $page_title, 'manage_options', self::$page_slug, array( $this, 'settings_page' ) );
 
+		// Settings page submenu item
+		self::$extn_menu_slug = add_submenu_page( self::$page_slug, __( 'Settings', 'apppresser' ), __( 'Settings', 'apppresser' ), 'manage_options', self::$page_slug, array( $this, 'settings_page' ) );
+
 		// Extensions page submenu item
 		self::$extn_menu_slug = add_submenu_page( self::$page_slug, __( 'Extensions', 'apppresser' ), __( 'Extensions', 'apppresser' ), 'manage_options', self::$extensions_slug, array( $this, 'extensions_page' ) );
+
 		// Help page submenu item
 		self::$help_menu_slug = add_submenu_page( self::$page_slug, __( 'Help / Support', 'apppresser' ), __( 'Help / Support', 'apppresser' ), 'manage_options', self::$help_slug, array( $this, 'help_support_page' ) );
 
@@ -362,10 +366,10 @@ class AppPresser_Admin_Settings extends AppPresser {
 		) );
 		self::add_setting( 'appp_home_page', __( 'Use a unique homepage for your app.', 'apppresser' ), array(
 			'helptext' => __( 'Allows you to specify which page users will see first when they load up you AppPresser app.', 'apppresser' ),
-			'description' => __( 'Start typing to search for a page', 'apppresser' ),
+			'description' => __( 'Start typing to search for a page, or enter a page ID.', 'apppresser' ),
 		) );
 
-		$menus = array( 'option-none' => __( '-- select --', 'apppresser' ) );
+		/*$menus = array( 'option-none' => __( '-- select --', 'apppresser' ) );
 		foreach ( (array) $this->nav_menus as $menu ) {
 			$menus[ $menu->term_id ] = $menu->name;
 		}
@@ -381,7 +385,7 @@ class AppPresser_Admin_Settings extends AppPresser {
 			'type' => 'select',
 			'options' => $menus,
 			'helptext' => __( 'Use a custom secondary menu inside your app (the top right dropdown in the header).', 'apppresser' ),
-		) );
+		) );*/
 
 		add_action( 'apppresser_tab_buttons_general', array( $this, 'help_link' ) );
 
@@ -472,9 +476,9 @@ class AppPresser_Admin_Settings extends AppPresser {
 				if ( ! empty( $options ) ) {
 					$current = $value;
 					$opts = array();
-					foreach ( $options as $value => $name ) {
-						$value = $value == 'option-none' ? '' : esc_attr( $value );
-						$opts[ $value ] = '<option value="'. $value .'" '. selected( $value, $current, false ) .'>'. esc_html( $name ) .'</option>'."\n";
+					foreach ( $options as $opt_value => $opt_name ) {
+						$opt_value = $opt_value == 'option-none' ? '' : esc_attr( $opt_value );
+						$opts[ $opt_value ] = '<option value="'. $opt_value .'" '. selected( $opt_value, $current, false ) .'>'. esc_html( $opt_name ) .'</option>'."\n";
 					}
 					if ( isset( $opts['option-none'] ) ) {
 						$field .= '<option value="">'. $opts['option-none'] .'</option>';
@@ -492,9 +496,9 @@ class AppPresser_Admin_Settings extends AppPresser {
 				if ( ! empty( $options ) ) {
 					$current = $value;
 					$opts = array();
-					foreach ( $options as $value => $name ) {
-						$value = $value == 'option-none' ? '' : esc_attr( $value );
-						$opts[ $value ] = '<p><label><input type="radio" name="appp_settings['. $key .']" value="'. $value .'" '. checked( $value, $current, false ) .'>&nbsp;&nbsp;'. esc_html( $name ) .'</label></p>'."\n";
+					foreach ( $options as $opt_value => $opt_name ) {
+						$opt_value = $opt_value == 'option-none' ? '' : esc_attr( $opt_value );
+						$opts[ $opt_value ] = '<p><label><input type="radio" name="appp_settings['. $key .']" value="'. $opt_value .'" '. checked( $opt_value, $current, false ) .'>&nbsp;&nbsp;'. esc_html( $opt_name ) .'</label></p>'."\n";
 					}
 					if ( isset( $opts['option-none'] ) ) {
 						$field .= '<p><label><input type="radio" name="appp_settings['. $key .']" value="">&nbsp;&nbsp;'. $opts['option-none'] .'</label></p>';
@@ -673,6 +677,8 @@ class AppPresser_Admin_Settings extends AppPresser {
 				'<a href="http://twitter.com/lisasabinwilson" target="_blank">Lisa Sabin-Wilson</a>' ); ?>.</p>
 			<p><?php printf( __( 'Development props to %s and %s', 'apppresser' ),
 				'<a href="http://twitter.com/jtsternberg" target="_blank">Justin "JT$" Sternberg</a>',
+				'<a href="http://twitter.com/pmgarman" target="_blank">Patrick Garman</a>',
+				'<a href="http://twitter.com/modemlooper" target="_blank">Ryan Fugate</a>',
 				'<a href="http://twitter.com/tw2113" target="_blank">Michael "Venkman" Beckwith</a>' ); ?>.</p>
 		</div>
 		<?php
