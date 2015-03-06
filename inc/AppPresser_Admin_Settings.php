@@ -65,6 +65,26 @@ class AppPresser_Admin_Settings extends AppPresser {
 
 	}
 
+
+	/**
+	 * phonegap_versions function.
+	 *
+	 * @access public
+	 * @return array
+	 */
+	public function phonegap_versions() {
+
+		return $pg_versions = array( '3.5.0' => '3.5.0', '3.6.3' => '3.6.3' );
+
+	}
+
+
+	/**
+	 * get_theme_settings_file function.
+	 *
+	 * @access public
+	 * @return void
+	 */
 	public function get_theme_settings_file() {
 		// Get saved apppresser theme
 		$appp_theme = self::settings( 'appp_theme' );
@@ -153,6 +173,7 @@ class AppPresser_Admin_Settings extends AppPresser {
 		wp_enqueue_script( 'appp-admin', self::$js_url . 'appp-admin.js', array( 'jquery', 'jquery-ui-core', 'jquery-ui-tooltip' ), self::VERSION );
 		wp_enqueue_style( 'jquery-ui-smoothness', self::$css_url . 'smoothness/smoothness.custom.min.css' );
 		wp_enqueue_style( 'appp-admin-styles', self::$css_url . 'appp-admin-styles.css', null, self::VERSION );
+		wp_enqueue_media();
 	}
 
 	/**
@@ -364,6 +385,14 @@ class AppPresser_Admin_Settings extends AppPresser {
 			'helptext' => __( 'Select which theme you want to be loaded inside the app, such as the AppPresser theme.', 'apppresser' ),
 			'description' => __( 'Must be enabled above.', 'apppresser' ),
 		) );
+
+		self::add_setting( 'appp_pg_version', __( 'Phonegap Version', 'apppresser' ), array(
+			'type' => 'select',
+			'options' => $this->phonegap_versions(),
+			'helptext' => __( 'Select the Phonegap Version of your app.', 'apppresser' ),
+			'description' => __( 'Select Phonegap Version.', 'apppresser' ),
+		) );
+
 		self::add_setting( 'appp_home_page', __( 'Use a unique homepage for your app.', 'apppresser' ), array(
 			'helptext' => __( 'Allows you to specify which page users will see first when they load up you AppPresser app.', 'apppresser' ),
 			'description' => __( 'Start typing to search for a page, or enter a page ID.', 'apppresser' ),
@@ -525,6 +554,16 @@ class AppPresser_Admin_Settings extends AppPresser {
 				break;
 
 			case 'h3':
+				break;
+
+			case 'title':
+				$field .= '<h2>' . $value . '</h2>';
+				break;
+
+			case 'file':
+				$field .= sprintf( '<input class="custom_media_url" id="apppresser--%1$s" type="text" name="appp_settings[%2$s]" value="%3$s" style="margin-bottom:10px; clear:right;"><a href="#" class="button-primary custom_media_upload">Choose File</a>'."\n", $key, $key, $value );
+				if ( $args['description'] )
+					$field .= '&nbsp; <span class="description">'. $args['description'] .'</span>';
 				break;
 
 			default:

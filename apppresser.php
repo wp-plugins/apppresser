@@ -5,7 +5,7 @@ Plugin URI: http://apppresser.com
 Description: A mobile app development framework for WordPress.
 Text Domain: apppresser
 Domain Path: /languages
-Version: 1.1.3
+Version: 1.1.4
 Author: AppPresser Team
 Author URI: http://apppresser.com
 License: GPLv2
@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class AppPresser {
 
-	const VERSION           = '1.1.3';
+	const VERSION           = '1.1.4';
 	const SETTINGS_NAME     = 'appp_settings';
 	public static $settings = 'false';
 	public static $instance = null;
@@ -62,6 +62,8 @@ class AppPresser {
 	 */
 	function __construct() {
 
+		$pg_version =  ( appp_get_setting( 'appp_pg_version' ) ) ? appp_get_setting( 'appp_pg_version' ) : '3.5.0';
+
 		// Define plugin constants
 		self::$dir_path = trailingslashit( plugin_dir_path( __FILE__ ) );
 		self::$dir_url  = trailingslashit( plugins_url( dirname( plugin_basename( __FILE__ ) ) ) );
@@ -70,7 +72,7 @@ class AppPresser {
 		self::$css_url  = self::$dir_url  . 'css/';
 		self::$img_url  = self::$dir_url  . 'images/';
 		self::$js_url   = self::$dir_url  . 'js/';
-		self::$pg_url   = self::$dir_url  . 'pg/';
+		self::$pg_url   = self::$dir_url  . 'pg/' . $pg_version . '/';
 
 		self::$l10n = array(
 			'ajaxurl'                     => admin_url( 'admin-ajax.php' ),
@@ -82,7 +84,7 @@ class AppPresser {
 		);
 
 		// Load translations
-		load_plugin_textdomain( 'apppresser', false, 'apppresser/languages' );
+		load_plugin_textdomain( 'apppresser', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
 		// Setup our activation and deactivation hooks
 		register_activation_hook( __FILE__, array( $this, 'activate' ) );
